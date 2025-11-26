@@ -21,12 +21,27 @@
 from config import TOKEN, WORKERS
 import logging
 import os
+from urllib.parse import urlparse
 from telegram.ext import Updater
 
 from game_manager import GameManager
 from database import db
 
-db.bind('sqlite', os.getenv('UNO_DB', 'uno.sqlite3'), create_db=True)
+# Heroku'da DATABASE_URL varsa PostgreSQL kullan, yoksa lokalde eski gibi SQLite kullan
+db_url = os.getenv("DATABASE_URL")
+if db_url:
+    url = urlparse(db_url)
+    db.bind(
+        provider="postgres",
+        user=url.username,
+        password=url.password,
+        host=url.hostname,
+        port=url.port,
+        database=url.path.lstrip("/"),
+    )
+else:
+    db.bind("sqlite", os.getenv("UNO_DB", "uno.sqlite3"), create_db=True)
+
 db.generate_mapping(create_tables=True)
 
 gm = GameManager()
